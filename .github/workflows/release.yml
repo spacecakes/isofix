@@ -41,4 +41,4 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" ISOFix.zip --title "ISOFix ${GITHUB_REF_NAME#v}" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" ISOFix.zip --title "ISOFix ${GITHUB_REF_NAME#v}" --notes-from-tag

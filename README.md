@@ -42,4 +42,4 @@ Start the app. It runs hidden and starts itself at login. Open it again any time
 
 ## Release
 
-Push a tag that matches `CFBundleShortVersionString` in `Info.plist`, for example `v1.0`. The Release workflow builds `ISOFix.zip` and publishes it as a GitHub release. To sign release builds with the same certificate, export it as a `.p12` and add two repository secrets: `SIGNING_CERT_P12` (the file, base64) and `SIGNING_CERT_PASSWORD`. Then update `version` and `sha256` in [spacecakes/homebrew-tap](https://github.com/spacecakes/homebrew-tap).
+Push an annotated tag that matches `CFBundleShortVersionString` in `Info.plist`, for example `git tag -a v1.1 -m "<release notes>"`. The tag message becomes the release notes. The Release workflow builds `ISOFix.zip` and publishes it as a GitHub release. To sign release builds with the same certificate, export it as a `.p12` and add two repository secrets: `SIGNING_CERT_P12` (the file, base64) and `SIGNING_CERT_PASSWORD`. Then update `version` and `sha256` in [spacecakes/homebrew-tap](https://github.com/spacecakes/homebrew-tap).
