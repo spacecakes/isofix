@@ -14,9 +14,15 @@ cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 swiftc -O -swift-version 5 -target arm64-apple-macos13.0 \
   Sources/*.swift -o "$APP/Contents/MacOS/ISOFix"
 
-# Ad-hoc signature: every rebuild is a new identity, so macOS will ask for
-# Input Monitoring again after reinstalling.
-codesign --force --sign - "$APP"
+# macOS ties the Input Monitoring grant to the signing identity. A self-signed
+# "ISOFix Signing" certificate keeps that identity across rebuilds; an ad-hoc
+# signature changes on every build, so macOS asks for the grant again.
+IDENTITY="ISOFix Signing"
+if security find-identity -p codesigning | grep -q "\"$IDENTITY\""; then
+  codesign --force --sign "$IDENTITY" "$APP"
+else
+  codesign --force --sign - "$APP"
+fi
 
 if [[ "${1:-}" == install ]]; then
   pkill -x ISOFix || true
