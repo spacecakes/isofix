@@ -54,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             window = w
         }
         model.refresh()
+        model.recordsPresses = true
         // Show in Dock and ⌘-Tab only while the window is open.
         NSApp.setActivationPolicy(.regular)
         window?.makeKeyAndOrderFront(nil)
@@ -61,6 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
+        model.recordsPresses = false
         NSApp.setActivationPolicy(.accessory)
     }
 

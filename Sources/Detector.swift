@@ -8,7 +8,21 @@ import os
 final class Detector {
     enum Verdict { case correct, wrong }
 
-    var onVerdict: ((KeyboardID, Verdict) -> Void)?
+    /// The two watched keys, by where they sit on an ISO keyboard.
+    enum Key {
+        case leftOfOne, besideShift
+        var label: String { self == .leftOfOne ? "§" : "<" }
+    }
+
+    /// One press of a watched key: the key the board reported and the key macOS typed.
+    struct Check {
+        let id: KeyboardID
+        let pressed: Key
+        let typed: Key
+        var verdict: Verdict { pressed == typed ? .correct : .wrong }
+    }
+
+    var onCheck: ((Check) -> Void)?
     var onDevicesChanged: (() -> Void)?
 
     static let log = Logger(subsystem: "com.gabriellundmark.isofix", category: "detector")
@@ -122,9 +136,12 @@ final class Detector {
         while !raws.isEmpty, !keys.isEmpty {
             let raw = raws.removeFirst(), key = keys.removeFirst()
             guard let id = raw.id else { continue }
-            let verdict: Verdict = Self.expected[raw.usage] == key.code ? .correct : .wrong
-            Self.log.info("\(id, privacy: .public): usage 0x\(String(raw.usage, radix: 16), privacy: .public) -> keycode \(key.code) = \(verdict == .correct ? "correct" : "WRONG", privacy: .public)")
-            onVerdict?(id, verdict)
+            let section = kHIDUsage_KeyboardGraveAccentAndTilde
+            let check = Check(id: id,
+                              pressed: raw.usage == section ? .leftOfOne : .besideShift,
+                              typed: key.code == Self.expected[section] ? .leftOfOne : .besideShift)
+            Self.log.info("\(id, privacy: .public): usage 0x\(String(raw.usage, radix: 16), privacy: .public) -> keycode \(key.code) = \(check.verdict == .correct ? "correct" : "WRONG", privacy: .public)")
+            onCheck?(check)
         }
     }
 }

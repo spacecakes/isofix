@@ -12,7 +12,8 @@ struct SettingsView: View {
                         .frame(width: 72, height: 72)
                     VStack(alignment: .leading, spacing: 6) {
                         Text("ISOFix").font(.title2.bold())
-                        Text("macOS often swaps § and < on third-party ISO keyboards. ISOFix catches it the first time you press one, and fixes that keyboard from then on.")
+                        (Text("macOS often swaps ") + .key("§") + Text(" and ") + .key("<")
+                         + Text(" on third-party ISO keyboards. ISOFix catches it the first time you press one, and fixes that keyboard from then on."))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -67,6 +68,28 @@ struct SettingsView: View {
                 footnote("ISOFix checks a keyboard when you press § or < on it. If you're running Karabiner-Elements, quit it. It takes over your keyboards, so ISOFix can't fix them.")
             }
 
+            if model.monitoring {
+                Section {
+                    HStack(spacing: 20) {
+                        KeyTestView(press: model.lastPress)
+                        VStack(alignment: .leading, spacing: 2) {
+                            if let p = model.lastPress {
+                                Text(p.result)
+                                Text(p.keyboard).font(.caption).foregroundStyle(.secondary)
+                            } else {
+                                (Text("Press ") + .key("§") + Text(" or ") + .key("<") + Text(" to test"))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    Text("Key test")
+                } footer: {
+                    footnote("If a different key lights up than the one you pressed, your keyboard reports them swapped. Undo that in its settings and use Automatic, or pick the setting that types the right key.")
+                }
+            }
+
             Section {
                 Toggle("Launch at login", isOn: Binding(get: { model.launchAtLogin },
                                                         set: { model.setLaunchAtLogin($0) }))
@@ -90,9 +113,9 @@ struct SettingsView: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// "Keychron · USB · Fixed at 20:41"
+    /// "Keychron · USB"
     private func details(_ row: AppModel.Row) -> String {
-        [row.info.manufacturer ?? row.id.description, row.info.transport, row.status]
+        [row.info.manufacturer ?? row.id.description, row.info.transport]
             .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
     }
 

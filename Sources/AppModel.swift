@@ -9,17 +9,32 @@ final class AppModel: ObservableObject {
         let name: String
         let swapApplied: Bool
         let info: KeyboardInfo
-        let status: String
         let mode: Mode
     }
 
     enum Mode: Hashable { case auto, swap, leave }
+
+    /// The last press of § or < shown in the window, to tell what a keyboard actually sends.
+    struct Press: Identifiable {
+        let id = UUID() // new for every press, so repeats of the same key still register
+        let keyboard: String
+        let pressed: Detector.Key
+        let typed: Detector.Key
+        let result: String
+        var correct: Bool { pressed == typed }
+    }
+
+    /// What `handle` did about a press, for the key test to describe.
+    private enum Outcome { case correct, fixed, pinned, skipped }
 
     @Published private(set) var rows: [Row] = []
     @Published private(set) var monitoring = false
     @Published private(set) var permissionGranted = Detector.hasPermission
     @Published private(set) var launchAtLogin = AppModel.loginEnabled
     @Published private(set) var loginError: String?
+    @Published private(set) var lastPress: Press?
+    /// Presses are only kept while the window is open, and dropped when it closes.
+    var recordsPresses = false { didSet { if !recordsPresses { lastPress = nil } } }
     /// Without the window there is no visible sign the app needs anything or
     /// that it started working, so show it on first run, while monitoring can't
     /// run, and on the launch after a run where it couldn't: the "Quit & Reopen"
@@ -33,8 +48,6 @@ final class AppModel: ObservableObject {
     private var pendingReconcile: DispatchWorkItem?
     private static var loginEnabled: Bool { SMAppService.mainApp.status == .enabled }
 
-    private enum Status { case correct(Date), fixed(Date) }
-    private var status: [KeyboardID: Status] = [:]
     private var cooldownUntil: [KeyboardID: Date] = [:]
 
     private var isFirstRun: Bool { !defaults.bool(forKey: "didOnboard") }
@@ -48,7 +61,10 @@ final class AppModel: ObservableObject {
             setLaunchAtLogin(true)
         }
 
-        detector.onVerdict = { [weak self] id, verdict in self?.handle(verdict, for: id) }
+        detector.onCheck = { [weak self] check in
+            guard let self else { return }
+            record(check, handle(check))
+        }
         detector.onDevicesChanged = { [weak self] in self?.scheduleReconcile() }
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
@@ -108,15 +124,8 @@ final class AppModel: ObservableObject {
         let boards = kbs ?? rows.map { ExternalKeyboard(id: $0.id, name: $0.name, swapApplied: $0.swapApplied, info: $0.info) }
         let new = boards.map { kb -> Row in
             let swap = changed?.0 == kb.id ? changed!.1 : kb.swapApplied
-            func time(_ d: Date) -> String { d.formatted(date: .omitted, time: .shortened) }
             let mode: Mode = ignored(kb.id) ? (swap ? .swap : .leave) : .auto
-            let text: String
-            switch status[kb.id] {
-            case _ where mode != .auto, nil: text = ""
-            case .correct(let d): text = "Correct, checked \(time(d))"
-            case .fixed(let d): text = "Fixed at \(time(d))"
-            }
-            return Row(id: kb.id, name: kb.name, swapApplied: swap, info: kb.info, status: text, mode: mode)
+            return Row(id: kb.id, name: kb.name, swapApplied: swap, info: kb.info, mode: mode)
         }
         if new != rows { rows = new }
     }
@@ -125,7 +134,6 @@ final class AppModel: ObservableObject {
     /// the manual modes pin it and stop detection for that keyboard.
     func setMode(_ mode: Mode, for id: KeyboardID) {
         defaults.set(mode != .auto, forKey: "ignore.\(id)")
-        status[id] = nil
         var changed: (KeyboardID, Bool)?
         if mode != .auto {
             apply(mode == .swap, id)
@@ -134,23 +142,34 @@ final class AppModel: ObservableObject {
         rebuildRows(changed: changed)
     }
 
-    private func handle(_ verdict: Detector.Verdict, for id: KeyboardID) {
-        if ignored(id) { return }
-        if let until = cooldownUntil[id], until > Date() { return }
-        var changed: (KeyboardID, Bool)?
-        switch verdict {
-        case .correct:
-            status[id] = .correct(Date())
-        case .wrong:
-            guard let row = rows.first(where: { $0.id == id }) else { return }
-            let on = !row.swapApplied
-            apply(on, id)
-            changed = (id, on)
-            cooldownUntil[id] = Date().addingTimeInterval(1)
-            status[id] = .fixed(Date())
-            Detector.log.notice("\(id, privacy: .public): wrong key detected, swap now \(on)")
+    private func handle(_ check: Detector.Check) -> Outcome {
+        let id = check.id
+        guard check.verdict == .wrong else { return .correct }
+        if ignored(id) { return .pinned }
+        if let until = cooldownUntil[id], until > Date() { return .skipped }
+        guard let row = rows.first(where: { $0.id == id }) else { return .skipped }
+        let on = !row.swapApplied
+        apply(on, id)
+        cooldownUntil[id] = Date().addingTimeInterval(1)
+        Detector.log.notice("\(id, privacy: .public): wrong key detected, swap now \(on)")
+        rebuildRows(changed: (id, on))
+        return .fixed
+    }
+
+    /// Runs after `handle`, so the row already shows any swap it just applied.
+    private func record(_ check: Detector.Check, _ outcome: Outcome) {
+        guard recordsPresses else { return }
+        let row = rows.first { $0.id == check.id }
+        let swapped = row?.swapApplied ?? false
+        // Whether the key came out right is visible on the key itself; say what ISOFix did.
+        let result = switch outcome {
+        case .correct: swapped ? "Swapped by ISOFix" : "No swap needed"
+        case .fixed: swapped ? "Fixed: now swapped" : "Fixed: swap removed"
+        case .pinned: "Not fixed: \(swapped ? "Always swap" : "Don't swap") is selected"
+        case .skipped: "Just fixed, press again"
         }
-        rebuildRows(changed: changed)
+        lastPress = Press(keyboard: row?.name ?? check.id.description,
+                          pressed: check.pressed, typed: check.typed, result: result)
     }
 
     // MARK: Settings
