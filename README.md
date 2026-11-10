@@ -14,23 +14,31 @@ ISOFix notices when `§` and `<` come out wrong and fixes it for that keyboard. 
 
 ## Install
 
-With [Homebrew](https://brew.sh):
+Needs macOS 13+ on Apple silicon. Grant **Input Monitoring** when asked.
+
+If you're running Karabiner-Elements, quit it. It takes over your keyboards, so ISOFix can't fix them.
+
+The Homebrew and download builds are not notarized, so macOS blocks them the first time they open. Go to **System Settings → Privacy & Security** and click **Open Anyway**. Do this again after each update.
+
+### Homebrew
 
 ```sh
 brew install --cask spacecakes/tap/isofix
 ```
 
-The app is not notarized, so macOS blocks it the first time it opens. Go to **System Settings → Privacy & Security** and click **Open Anyway**. Do this again after each update.
+### Download
 
-Or build it yourself:
+Download [ISOFix.zip](https://github.com/spacecakes/isofix/releases/latest/download/ISOFix.zip) from the [latest release](https://github.com/spacecakes/isofix/releases/latest), unzip it, and move **ISOFix.app** to **Applications**.
+
+### Build from source
+
+Needs the Xcode Command Line Tools.
 
 ```sh
 git clone https://github.com/spacecakes/isofix.git && cd isofix && ./build.sh install
 ```
 
-Needs macOS 13+ and the Xcode Command Line Tools. Grant **Input Monitoring** when asked. To keep the grant across rebuilds, see [DEVELOPMENT.md](DEVELOPMENT.md).
-
-If you're running Karabiner-Elements, quit it. It takes over your keyboards, so ISOFix can't fix them.
+To keep the Input Monitoring grant across rebuilds, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Usage
 
