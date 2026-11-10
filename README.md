@@ -43,6 +43,6 @@ To keep the Input Monitoring grant across rebuilds, see [DEVELOPMENT.md](DEVELOP
 
 ## Usage
 
-Start the app. It runs hidden and starts itself at login. Open it again any time to change its settings.
+Start the app. It runs in the menu bar and starts itself at login. You can hide the menu bar icon in its settings; then open the app again to get back to them.
 
 The first time you press `§` or `<` on a keyboard, it may come out wrong. ISOFix fixes that keyboard from then on.

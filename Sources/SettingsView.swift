@@ -96,8 +96,12 @@ struct SettingsView: View {
                 if let err = model.loginError {
                     Text(err).font(.caption).foregroundStyle(.red)
                 }
+                Toggle("Show in menu bar", isOn: Binding(get: { model.showsInMenuBar },
+                                                         set: { model.setShowsInMenuBar($0) }))
             } footer: {
-                footnote("ISOFix runs in the background without an icon. Open it again to get back here.")
+                if !model.showsInMenuBar {
+                    footnote("ISOFix runs in the background without an icon. Open it again to get back here.")
+                }
             }
 
             Section {

@@ -1,17 +1,21 @@
 import AppKit
+import Combine
 import SwiftUI
 
 enum AppInfo {
     static let repoURL = URL(string: "https://github.com/spacecakes/isofix")!
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate {
     private let model = AppModel()
     private var window: NSWindow?
+    private var statusItem: NSStatusItem?
+    private var menuBarSetting: AnyCancellable?
 
     func applicationDidFinishLaunching(_ note: Notification) {
         NSApp.mainMenu = makeMainMenu()
         model.start()
+        menuBarSetting = model.$showsInMenuBar.sink { [weak self] in self?.setStatusItem($0) }
 
         NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
@@ -64,6 +68,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         model.recordsPresses = false
         NSApp.setActivationPolicy(.accessory)
+    }
+
+    // MARK: Menu bar
+
+    private func setStatusItem(_ shown: Bool) {
+        guard shown != (statusItem != nil) else { return }
+        guard shown else {
+            NSStatusBar.system.removeStatusItem(statusItem!)
+            statusItem = nil
+            return
+        }
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        item.button?.image = MenuBarIcon.image
+        let menu = NSMenu()
+        menu.delegate = self
+        item.menu = menu
+        statusItem = item
+    }
+
+    /// Built on open, so the keyboard count is current.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
+        let count = model.rows.count
+        menu.addItem(withTitle: count == 0 ? "No external keyboards"
+                     : count == 1 ? "1 external keyboard" : "\(count) external keyboards",
+                     action: nil, keyEquivalent: "")
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Settings…", action: #selector(showWindow), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: "Quit ISOFix", action: #selector(NSApp.terminate(_:)), keyEquivalent: "q")
     }
 
     private func makeMainMenu() -> NSMenu {

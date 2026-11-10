@@ -32,6 +32,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var permissionGranted = Detector.hasPermission
     @Published private(set) var launchAtLogin = AppModel.loginEnabled
     @Published private(set) var loginError: String?
+    /// On unless turned off, so a fresh install visibly runs and has a way back to the window.
+    @Published private(set) var showsInMenuBar = UserDefaults.standard.object(forKey: "showInMenuBar") as? Bool ?? true
     @Published private(set) var lastPress: Press?
     /// Presses are only kept while the window is open, and dropped when it closes.
     var recordsPresses = false { didSet { if !recordsPresses { lastPress = nil } } }
@@ -182,6 +184,11 @@ final class AppModel: ObservableObject {
             loginError = error.localizedDescription
         }
         launchAtLogin = Self.loginEnabled
+    }
+
+    func setShowsInMenuBar(_ on: Bool) {
+        defaults.set(on, forKey: "showInMenuBar")
+        showsInMenuBar = on
     }
 
     func requestPermission() {
