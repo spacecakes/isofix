@@ -20,6 +20,11 @@ final class AppModel: ObservableObject {
     @Published private(set) var permissionGranted = Detector.hasPermission
     @Published private(set) var launchAtLogin = AppModel.loginEnabled
     @Published private(set) var loginError: String?
+    /// Without the window there is no visible sign the app needs anything or
+    /// that it started working, so show it on first run, while monitoring can't
+    /// run, and on the launch after a run where it couldn't: the "Quit & Reopen"
+    /// after the Input Monitoring grant.
+    private(set) var showsWindowAtLaunch = false
 
     private let mapper = KeyMapper()
     private let detector = Detector()
@@ -32,10 +37,12 @@ final class AppModel: ObservableObject {
     private var status: [KeyboardID: Status] = [:]
     private var cooldownUntil: [KeyboardID: Date] = [:]
 
-    var isFirstRun: Bool { !defaults.bool(forKey: "didOnboard") }
+    private var isFirstRun: Bool { !defaults.bool(forKey: "didOnboard") }
 
     func start() {
-        if isFirstRun {
+        let firstRun = isFirstRun
+        let monitoringFailedLastRun = defaults.bool(forKey: "monitoringFailed")
+        if firstRun {
             defaults.set(true, forKey: "didOnboard")
             // "Install and forget": start at login unless the user turns it off.
             setLaunchAtLogin(true)
@@ -52,11 +59,13 @@ final class AppModel: ObservableObject {
         // Safety net: re-assert mappings and pick up a late permission grant.
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in self?.refresh() }
         refresh()
+        showsWindowAtLaunch = firstRun || monitoringFailedLastRun || !monitoring
     }
 
     func refresh() {
         permissionGranted = Detector.hasPermission
         monitoring = detector.start()
+        defaults.set(!monitoring, forKey: "monitoringFailed")
         launchAtLogin = Self.loginEnabled
         reconcile()
     }
