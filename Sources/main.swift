@@ -11,7 +11,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationDidFinishLaunching(_ note: Notification) {
         NSApp.mainMenu = makeMainMenu()
-        let firstRun = model.isFirstRun
         model.start()
 
         NotificationCenter.default.addObserver(
@@ -19,9 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self?.model.refresh()
         }
 
-        // Without the window there is no visible sign the app needs anything, so
-        // show it on first run and whenever monitoring can't run.
-        if firstRun || !model.monitoring { showWindow() }
+        if model.showsWindowAtLaunch { showWindow() }
     }
 
     /// Opening the app again while it's running (Finder, Spotlight, `open`) lands here.
