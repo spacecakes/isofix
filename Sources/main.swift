@@ -87,16 +87,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         statusItem = item
     }
 
-    /// Built on open, so the keyboard count is current.
+    /// Built on open, so keyboards and their state are current.
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
-        let count = model.rows.count
-        menu.addItem(withTitle: count == 0 ? "No external keyboards"
-                     : count == 1 ? "1 external keyboard" : "\(count) external keyboards",
-                     action: nil, keyEquivalent: "")
+        if !model.monitoring {
+            menu.addItem(withTitle: "Input Monitoring needed…", action: #selector(showWindow), keyEquivalent: "").target = self
+            menu.addItem(.separator())
+        }
+        if model.rows.isEmpty {
+            menu.addItem(withTitle: "No external keyboards", action: nil, keyEquivalent: "")
+        }
+        for row in model.rows {
+            let item = NSMenuItem(title: row.name, action: nil, keyEquivalent: "")
+            let status = switch row.mode {
+            case .auto: row.swapApplied ? "Swapped by ISOFix" : "Automatic"
+            case .swap: "Always swap"
+            case .off: "Off"
+            }
+            if #available(macOS 14.4, *) { item.subtitle = status } else { item.title += " — \(status)" }
+            item.submenu = modeMenu(for: row)
+            menu.addItem(item)
+        }
         menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(showWindow), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "Quit ISOFix", action: #selector(NSApp.terminate(_:)), keyEquivalent: "q")
+    }
+
+    /// Same choices as the window's picker.
+    private func modeMenu(for row: AppModel.Row) -> NSMenu {
+        let menu = NSMenu()
+        func add(_ title: String, _ mode: AppModel.Mode) {
+            let item = NSMenuItem(title: title, action: #selector(pickMode), keyEquivalent: "")
+            item.target = self
+            item.representedObject = ModeChoice(id: row.id, mode: mode)
+            item.state = row.mode == mode ? .on : .off
+            menu.addItem(item)
+        }
+        add("Automatic", .auto)
+        menu.addItem(.separator())
+        add("Always swap", .swap)
+        add("Off", .off)
+        return menu
+    }
+
+    private struct ModeChoice { let id: KeyboardID; let mode: AppModel.Mode }
+
+    @objc private func pickMode(_ sender: NSMenuItem) {
+        guard let choice = sender.representedObject as? ModeChoice else { return }
+        model.setMode(choice.mode, for: choice.id)
     }
 
     private func makeMainMenu() -> NSMenu {
