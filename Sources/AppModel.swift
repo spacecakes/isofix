@@ -12,7 +12,7 @@ final class AppModel: ObservableObject {
         let mode: Mode
     }
 
-    enum Mode: Hashable { case auto, swap, leave }
+    enum Mode: Hashable { case auto, swap, off }
 
     /// The last press of § or < shown in the window, to tell what a keyboard actually sends.
     struct Press: Identifiable {
@@ -126,7 +126,7 @@ final class AppModel: ObservableObject {
         let boards = kbs ?? rows.map { ExternalKeyboard(id: $0.id, name: $0.name, swapApplied: $0.swapApplied, info: $0.info) }
         let new = boards.map { kb -> Row in
             let swap = changed?.0 == kb.id ? changed!.1 : kb.swapApplied
-            let mode: Mode = ignored(kb.id) ? (swap ? .swap : .leave) : .auto
+            let mode: Mode = ignored(kb.id) ? (swap ? .swap : .off) : .auto
             return Row(id: kb.id, name: kb.name, swapApplied: swap, info: kb.info, mode: mode)
         }
         if new != rows { rows = new }
@@ -167,7 +167,7 @@ final class AppModel: ObservableObject {
         let result = switch outcome {
         case .correct: swapped ? "Swapped by ISOFix" : "No swap needed"
         case .fixed: swapped ? "Fixed: now swapped" : "Fixed: swap removed"
-        case .pinned: "Not fixed: \(swapped ? "Always swap" : "Don't swap") is selected"
+        case .pinned: swapped ? "Not fixed: Always swap is selected" : "Not fixed: ISOFix is off for this keyboard"
         case .skipped: "Just fixed, press again"
         }
         lastPress = Press(keyboard: row?.name ?? check.id.description,

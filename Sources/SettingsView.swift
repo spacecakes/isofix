@@ -51,7 +51,7 @@ struct SettingsView: View {
                         Text("Automatic").tag(AppModel.Mode.auto)
                         Divider()
                         Text("Always swap").tag(AppModel.Mode.swap)
-                        Text("Don't swap").tag(AppModel.Mode.leave)
+                        Text("Off").tag(AppModel.Mode.off)
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(row.name)
@@ -65,7 +65,8 @@ struct SettingsView: View {
             } header: {
                 Text("Keyboards")
             } footer: {
-                footnote("ISOFix checks a keyboard when you press § or < on it. If you're running Karabiner-Elements, quit it. It takes over your keyboards, so ISOFix can't fix them.")
+                footnote(Text("ISOFix checks a keyboard when you press ") + .key("§") + Text(" or ") + .key("<")
+                         + Text(" on it. If you're running Karabiner-Elements, quit it. It takes over your keyboards, so ISOFix can't fix them."))
             }
 
             if model.monitoring {
@@ -117,14 +118,17 @@ struct SettingsView: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// "Keychron · USB"
+    /// "Keychron · USB · Swapped by ISOFix". The manual modes already say it in the picker.
     private func details(_ row: AppModel.Row) -> String {
-        [row.info.manufacturer ?? row.id.description, row.info.transport]
+        [row.info.manufacturer ?? row.id.description, row.info.transport,
+         row.mode == .auto && row.swapApplied ? "Swapped by ISOFix" : nil]
             .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
-    private func footnote(_ text: String) -> some View {
-        Text(text)
+    private func footnote(_ text: String) -> some View { footnote(Text(text)) }
+
+    private func footnote(_ text: Text) -> some View {
+        text
             .font(.caption)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
