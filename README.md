@@ -46,3 +46,13 @@ To keep the Input Monitoring grant across rebuilds, see [DEVELOPMENT.md](DEVELOP
 Start the app. It runs in the menu bar and starts itself at login. You can hide the menu bar icon in its settings; then open the app again to get back to them.
 
 The first time you press `§` or `<` on a keyboard, it may come out wrong. ISOFix fixes that keyboard from then on.
+
+Each keyboard has a mode, set in the menu bar menu or the window:
+
+| Mode | What it does |
+|---|---|
+| **Automatic** | Swaps the keys when they come out wrong. Use this normally. |
+| **Always swap** | Keeps the keys swapped, for keyboards whose firmware reports them the other way round. |
+| **Off** | Leaves the keyboard alone. |
+
+To check a keyboard, open the window and press `§` or `<`. The key test shows which key you pressed and which one macOS typed.
